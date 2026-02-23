@@ -1,0 +1,1 @@
+npm run build && node dist/cli.js "Roboto-Black.ttf" --pairs cyrillic_pairs.txt -o kerning.json

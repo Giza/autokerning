@@ -1,0 +1,1 @@
+python apply_kerning.py FZFWZhuZiAYuanS-D.ttf kerning.json
