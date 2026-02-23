@@ -29,10 +29,10 @@ export function overlap(left: Glyph, right: Glyph, kern: number): number {
       `[OVERLAP] pair=${left.char}${right.char}, kern=${kern
         .toString()
         .padStart(4)}, lOffset=${lOffset
-        .toFixed(2)
-        .padStart(8)}, [${xStart.toFixed(0)}, ${xEnd.toFixed(0)}) width=${width
-        .toFixed(0)
-        .padStart(4)}`
+          .toFixed(2)
+          .padStart(8)}, [${xStart.toFixed(0)}, ${xEnd.toFixed(0)}) width=${width
+            .toFixed(0)
+            .padStart(4)}`
     );
   }
 
@@ -51,25 +51,48 @@ export function overlap(left: Glyph, right: Glyph, kern: number): number {
   const rH = right.height;
   const lH = left.height;
 
-  for (let y = 0; y < height; y++) {
+  // Pre-calculate valid Y intersection to avoid checking y < lH and y < rH later
+  const yEnd = Math.min(height, lH, rH);
+
+  // x and y must be precise integers representing pixel coordinates
+  // The intersection of valid pixels in both glyphs:
+  // Right glyph validity: 0 <= x < rW
+  // Left glyph validity:  0 <= (x - lOffset) < lW  =>  lOffset <= x < lOffset + lW
+  // Therefore, valid global x coordinates must satisfy BOTH:
+  const finalStartX = Math.ceil(Math.max(0, lOffset));
+  const finalEndX = Math.ceil(Math.min(rW, lOffset + lW));
+
+  if (finalStartX >= finalEndX || yEnd <= 0) {
+    if (debugCount < 3 && width > 0) {
+      logger.error(`         -> overlap=    0.00`);
+      debugCount++;
+    }
+    return 0;
+  }
+
+  // Pre-calculate how local left indices map to global X inside the loop
+  // lx = x - lOffset
+  // Let l_idx = floor(x - lOffset)
+  // Since x is integer, we can pull out the offset part
+  // Let shift = Math.floor(-lOffset) or similar. 
+  // Wait, if lOffset is float, Math.floor(x - lOffset) = x + Math.floor(-lOffset)
+  const lShift = Math.floor(-lOffset);
+
+  // Use direct typed-array access
+
+  for (let y = 0; y < yEnd; y++) {
     const rRowOff = y * rW;
     const lRowOff = y * lW;
-    for (let x = xStart; x < xEnd; x++) {
-      // Right glyph pixel at (x, y)
-      let rVal = 0;
-      if (x >= 0 && x < rW && y < rH) {
-        rVal = rData[rRowOff + x] ?? 0;
-      }
 
-      // Left glyph pixel at (x - lOffset, y)
-      let lVal = 0;
-      const lx = x - lOffset;
-      const li = Math.floor(lx);
-      if (li >= 0 && li < lW && y < lH) {
-        lVal = lData[lRowOff + li] ?? 0;
-      }
+    // Everything in this loop is guaranteed valid
+    for (let x = finalStartX; x < finalEndX; x++) {
+      const rVal = rData[rRowOff + x];
+      // For left index:
+      // lx = x - lOffset
+      // li = Math.floor(lx) = x + Math.floor(-lOffset)
+      const li = x + lShift;
+      const lVal = lData[lRowOff + li];
 
-      // Sum product of squared values
       sum += lVal * lVal * rVal * rVal;
     }
   }

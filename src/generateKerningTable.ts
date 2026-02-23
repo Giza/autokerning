@@ -64,8 +64,7 @@ export function findS(font: opentype.Font): [number, number, number] {
     // Safety check
     if (kernelWidth > 2 * FONT_SIZE) {
       logger.warn(
-        `⚠️ Failed to find reasonable kernel size (exceeded ${
-          2 * FONT_SIZE
+        `⚠️ Failed to find reasonable kernel size (exceeded ${2 * FONT_SIZE
         }). Using kernelWidth=${kernelWidth - 2}`
       );
       return [minS, maxS, kernelWidth - 2];
@@ -121,19 +120,44 @@ export async function generateKerningTable(
   }
 
   const kerningTable: { [key: string]: number } = {};
+
+  type Glyph = ReturnType<typeof renderGlyph>;
+  const blurredCache: Record<string, Glyph> = {};
+
+  const getBlurredGlyph = (ch: string) => {
+    if (!blurredCache[ch]) {
+      const g = renderGlyph(font, ch);
+      blurredCache[ch] = {
+        ...g,
+        bitmap: gaussianBlur(g.bitmap, undefined, kernelWidth),
+      };
+    }
+    return blurredCache[ch];
+  };
+
+  const totalPairs = pairList.length;
+  let count = 0;
+
   for (const pair of pairList) {
     const [lch, rch] = pair;
     if (!font.hasChar(lch) || !font.hasChar(rch)) {
       continue;
     }
-    process.stdout.write(`Calculating pair ${pair}\r`);
-    const left = renderGlyph(font, lch);
-    const right = renderGlyph(font, rch);
+    count++;
+
+    if (count % 10 === 0 || count === totalPairs || count === 1) {
+      const percent = Math.round((count / totalPairs) * 100);
+      process.stdout.write(`Calculating pair ${pair} - ${count}/${totalPairs} (${percent}%)\r`);
+    }
+
+    const blurredLeft = getBlurredGlyph(lch);
+    const blurredRight = getBlurredGlyph(rch);
     // Pass kernelWidth to kernPair for calibrated blur
-    const kernPx = kernPair(left, right, minS, maxS, kernelWidth);
-    const kernPercent = (kernPx / left.advance) * 100;
+    const kernPx = kernPair(blurredLeft, blurredRight, minS, maxS, kernelWidth);
+    const kernPercent = (kernPx / blurredLeft.advance) * 100;
     kerningTable[pair] = Math.round(kernPercent * 100) / 100;
   }
+  process.stdout.write("\n");
 
   if (writeFile) {
     const output = {

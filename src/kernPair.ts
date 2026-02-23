@@ -15,20 +15,12 @@ const KERN_STEP = Math.max(1, config.KERN_STEP);
  * @param kernelWidth - Optional: kernel width for adaptive blur (used in calibrated mode)
  */
 export function kernPair(
-  left: Glyph,
-  right: Glyph,
+  blurredLeft: Glyph,
+  blurredRight: Glyph,
   minOverlap: number,
   maxOverlap: number,
   kernelWidth?: number
 ): number {
-  const blurredLeft: Glyph = {
-    ...left,
-    bitmap: gaussianBlur(left.bitmap, undefined, kernelWidth),
-  };
-  const blurredRight: Glyph = {
-    ...right,
-    bitmap: gaussianBlur(right.bitmap, undefined, kernelWidth),
-  };
 
   // For calibration
   if (minOverlap === 0 && maxOverlap === 1e10) {

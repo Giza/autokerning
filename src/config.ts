@@ -4,7 +4,7 @@ export const FONT_SIZE = parseInt(process.env.FONT_SIZE || "100", 10);
 export const BLUR_SIGMA_FACTOR = parseFloat(
   process.env.BLUR_SIGMA_FACTOR || "0.15"
 );
-export const MAX_KERN = parseInt(process.env.MAX_KERN || "30", 10);
+export const MAX_KERN = parseInt(process.env.MAX_KERN || "150", 10);
 export const KERN_STEP = parseInt(process.env.KERN_STEP || "1", 10);
 export const DEBUG_STEP = parseInt(process.env.DEBUG_STEP || "5", 10);
 export const SELECTION_STRATEGY =
